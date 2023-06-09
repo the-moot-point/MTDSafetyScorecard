@@ -13,43 +13,6 @@ def convert_to_seconds(time_string):
     return h * 3600 + m * 60 + s
 
 
-def assign_coaching_videos(df):
-    # Initialize a new column in the existing DataFrame to hold the results
-    df['Formal Warning Video Assignment'] = ''
-
-    # Criteria
-    criteria = [
-        # Criterion 1
-        ((df['Percent Moderate Speeding'] +
-          df['Percent Heavy Speeding'] +
-          df['Percent Severe Speeding'] > 9.9), 'Speeding'),
-        # Criterion 2
-        ((df['Mobile Usage'] >= 5), 'Werner Herzog Movie'),
-        # Criterion 3
-        ((df['Inattentive Driving'] >= 5), 'End Distracted Driving'),
-        # Criterion 4
-        ((df[['Did Not Yield (Manual)',
-              'Ran Red Light (Manual)',
-              'Rolling Stop',
-              'Lane Departure (Manual)']].sum(axis=1) >= 5), 'Rolling Stops'),
-        # Criterion 5
-        ((df[['Following of 0-2s (Manual)', 'Following of 2-4s (Manual)', 'Late Response (Manual)',
-              'Defensive Driving (Manual)', 'Following Distance']].sum(axis=1) >= 5),
-         'Tailgating and the 3-second Rule'),
-        # Criterion 6
-        ((df['No Seat Belt'] >= 3), 'Seatbelt Use')
-    ]
-
-    # Apply each criterion
-    for criterion, video in criteria:
-        df.loc[criterion, 'Formal Warning Video Assignment'] += video + ', '
-
-    # Remove trailing comma and space from assignments
-    df['Formal Warning Video Assignment'] = df['Formal Warning Video Assignment'].str.rstrip(', ')
-
-    return df
-
-
 def get_unique_filename(filepath: str) -> str:
     filename, extension = os.path.splitext(filepath)
     counter = 1
@@ -123,28 +86,6 @@ def get_latest_file_in_directory(directory, *extensions):
     return newest_file
 
 
-def create_warning_report(df, columns):
-    """
-    Function to create a formal warning report.
-    Includes drivers with scores 70 or below or with a recorded crash.
-    """
-    warning_criteria = (df['Safety Score'] <= 70) | (df['Crash'] > 0)
-    warning_report = df.loc[warning_criteria, columns]
-
-    return warning_report
-
-
-def create_perfect_scores(df, columns):
-    """
-    Function to create the perfect scores report.
-    Includes valid drivers with 100 safety score.
-    """
-    valid_peers = ['Driver', 'Reset', 'Warehouse']
-    perfect_criteria = (df['Peer Group'].isin(valid_peers)) & (df['Safety Score'] >= 100)
-    perfect_report = df.loc[perfect_criteria, columns]
-
-    return perfect_report
-
 def score_range(score):
     if score == 100:
         return "Perfect 100"
@@ -192,20 +133,9 @@ def main():
     df['Speeding %'] = df['Percent Moderate Speeding'] + df['Percent Heavy Speeding'] + df['Percent Severe Speeding']
     df['Score Range'] = df['Safety Score'].apply(score_range)
 
-    # Calculate formal warning video assignments
-    df = assign_coaching_videos(df)
-
     # Create a filtered DataFrame for each report
     driver_scorecard = df[df['Driver Tags'].str.contains("Driver|Reset|Warehouse", na=False)].copy()
     manager_scorecard = df[df['Driver Tags'].str.contains("Manager", na=False)].copy()
-    warning_report = df[(df['Safety Score'] <= 70) | (df['Crash'] > 0)].copy()
-    coaching_video = df[df['Formal Warning Video Assignment'].str.strip() != '']
-    perfect_report = df[
-        (df['Peer Group'].str.contains("Driver|Reset|Warehouse")) & (df['Safety Score'] == 100)
-        ].copy()
-    top_drivers = df.sort_values(by='Mobile Usage', ascending=False).head(10)
-    total_mobile_usage = df['Mobile Usage'].sum()
-    top_drivers['Percent of Total Mobile Usage'] = top_drivers['Mobile Usage'] / total_mobile_usage * 100
 
     # Define columns for the driver scorecard dataframe
     scorecard_columns = ['Score Range', 'Company', 'Location', 'Driver Name', 'Peer Group',
@@ -214,31 +144,13 @@ def main():
                          'Mobile Usage', 'Crash', 'Collision Risk', 'Harsh Events',
                          'Inattentive Driving', 'Traffic Violations', 'Policy Violations']
 
-    coaching_columns = ['Company', 'Location', 'Driver Name', 'Peer Group',
-                        'Safety Score', 'Drive Time (hh:mm:ss)', 'Speeding %',
-                        'Mobile Usage', 'Crash', 'Collision Risk', 'Harsh Events',
-                        'Inattentive Driving', 'Traffic Violations', 'Policy Violations',
-                        'Formal Warning Video Assignment']
-
-    top_10_columns = ['Driver Name', 'Mobile Usage', 'Percent of Total Mobile Usage']
-
-    perfect_columns = ['Company', 'Location', 'Driver Name', 'Safety Score', 'Drive Time (hh:mm:ss)']
-
     driver_scorecard = driver_scorecard.loc[:, scorecard_columns]
     manager_scorecard = manager_scorecard.loc[:, scorecard_columns]
-    warning_report = warning_report.loc[:, scorecard_columns]
-    coaching_video_df = coaching_video.loc[:, coaching_columns]
-    perfect_report = perfect_report.loc[:, perfect_columns]
-    top_drivers = top_drivers.loc[:, top_10_columns]
 
     # Prepare the reports list with titles and dataframes
     reports = [
         {'title': 'Driver Scorecard', 'dataframe': driver_scorecard},
         {'title': 'Manager Scorecard', 'dataframe': manager_scorecard},
-        {'title': 'Paycom - Formal Warning', 'dataframe': warning_report},
-        {'title': 'Paycom - Coaching Videos', 'dataframe': coaching_video_df},
-        {'title': 'Perfect Scores', 'dataframe': perfect_report},
-        {'title': 'Top 10 Mobile Usage', 'dataframe': top_drivers}
 
     ]
 
@@ -261,7 +173,7 @@ def main():
 
     # Format the output file path
     directory_path = Path(directory)
-    output_file_path = directory_path.parent / 'Samsara MTD Scorecard' / f"MTD Safety Scorecard - {current_month.strftime('%b %Y')}.xlsx"
+    output_file_path = directory_path.parent / 'MTD Safety Scorecard' /f"MTD Safety Scorecard - {current_month.strftime('%b %Y')}.xlsx"
     print(f"Output file path: {output_file_path}")
 
     # If file already exists, append a number suffix
@@ -269,7 +181,7 @@ def main():
     if output_file_path.is_file():
         counter = 1
         while output_file_path.is_file():
-            output_file_path = directory_path.parent / 'Samsara MTD Scorecard' / f" MTD Safety Scorecard - {current_month.strftime('%b %Y')} ({counter}).xlsx"
+            output_file_path = directory_path.parent / 'MTD Safety Scorecard' / f" MTD Safety Scorecard - {current_month.strftime('%b %Y')} ({counter}).xlsx"
             counter += 1
 
     wb.save(output_file_path)
