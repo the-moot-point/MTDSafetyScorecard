@@ -44,8 +44,8 @@ def read_data(file_path):
 
 
 def split_driver_tags(df):
-    df[['Company', 'Location', 'Peer Group']] = df['Driver Tags'].str.split(',', expand=True)
-    df[['Company', 'Location', 'Peer Group']] = df[['Company', 'Location', 'Peer Group']].apply(lambda x: x.str.strip())
+    df[['Location', 'Peer Group']] = df['Driver Tags'].str.split(',', expand=True)
+    df[['Location', 'Peer Group']] = df[['Location', 'Peer Group']].apply(lambda x: x.str.strip())
     return df
 
 
@@ -89,9 +89,9 @@ def get_latest_file_in_directory(directory, *extensions):
 def score_range(score):
     if score == 100:
         return "Perfect 100"
-    elif score > 70:
+    elif score >= 70:
         return "Above 70"
-    elif 36 <= score <= 70:
+    elif 36 <= score < 70:
         return "Below 70"
     elif score <= 35:
         return "Critical - Below 35"
@@ -130,17 +130,20 @@ def main():
                                df['Lane Departure (Manual)']
     df['Policy Violations'] = df['Obstructed Camera (Automatic)'] + df['Obstructed Camera (Manual)'] + df[
         'Eating/Drinking (Manual)'] + df['Smoking (Manual)'] + df['No Seat Belt']
-    df['Speeding %'] = df['Percent Moderate Speeding'] + df['Percent Heavy Speeding'] + df['Percent Severe Speeding']
+    #df['Speeding %'] = df['Percent Moderate Speeding'] + df['Percent Heavy Speeding'] + df['Percent Severe Speeding']
     df['Score Range'] = df['Safety Score'].apply(score_range)
+    df['Moderate Speeding'] = df['Time Over Speed Limit (hh:mm:ss) - Moderate']
+    df['Heavy Speeding'] = df['Time Over Speed Limit (hh:mm:ss) - Heavy']
+    df['Severe Speeding'] = df['Time Over Speed Limit (hh:mm:ss) - Severe']
 
     # Create a filtered DataFrame for each report
     driver_scorecard = df[df['Driver Tags'].str.contains("Driver|Reset|Warehouse", na=False)].copy()
     manager_scorecard = df[df['Driver Tags'].str.contains("Manager", na=False)].copy()
 
     # Define columns for the driver scorecard dataframe
-    scorecard_columns = ['Score Range', 'Company', 'Location', 'Driver Name', 'Peer Group',
-                         'Safety Score', 'Drive Time (hh:mm:ss)', 'Percent Moderate Speeding',
-                         'Percent Heavy Speeding', 'Percent Severe Speeding',
+    scorecard_columns = ['Score Range', 'Location', 'Driver Name', 'Peer Group',
+                         'Safety Score', 'Drive Time (hh:mm:ss)', 'Moderate Speeding',
+                         'Heavy Speeding', 'Severe Speeding',
                          'Mobile Usage', 'Crash', 'Collision Risk', 'Harsh Events',
                          'Inattentive Driving', 'Traffic Violations', 'Policy Violations']
 
@@ -173,7 +176,7 @@ def main():
 
     # Format the output file path
     directory_path = Path(directory)
-    output_file_path = directory_path.parent / 'MTD Safety Scorecard' /f"MTD Safety Scorecard - {current_month.strftime('%b %Y')}.xlsx"
+    output_file_path = directory_path.parent / 'MTD Safety Scorecard' /f"MTD Safety Scorecard - {current_month.strftime('%d %b %Y')}.xlsx"
     print(f"Output file path: {output_file_path}")
 
     # If file already exists, append a number suffix
@@ -181,7 +184,7 @@ def main():
     if output_file_path.is_file():
         counter = 1
         while output_file_path.is_file():
-            output_file_path = directory_path.parent / 'MTD Safety Scorecard' / f" MTD Safety Scorecard - {current_month.strftime('%b %Y')} ({counter}).xlsx"
+            output_file_path = directory_path.parent / 'MTD Safety Scorecard' / f" MTD Safety Scorecard - {current_month.strftime('%d %b %Y')} ({counter}).xlsx"
             counter += 1
 
     wb.save(output_file_path)
