@@ -1,4 +1,4 @@
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 import pandas as pd
 import datetime
@@ -174,21 +174,43 @@ def main():
     # Get the previous month
     current_month = datetime.datetime.now() - relativedelta(months=0)
 
+    # Load the existing workbook (template)
+    wb = load_workbook('C:/Users/sgtjo/Documents/Samsara MTD Scorecard/template/template.xlsx')
+
+    # create reports (sheets) and add them to the workbook
+    for report in reports:
+        ws = wb[report['title']]  # get the sheet by name
+
+        # clear existing data in the sheet
+        for row in ws.iter_rows(min_row=14, max_row=ws.max_row):  # start from row 14 to preserve headers
+            for cell in row:
+                cell.value = None
+
+        # add data to the sheet
+        for r_index, r in enumerate(dataframe_to_rows(report['dataframe'], index=False, header=False),
+                                    14):  # start from row 14
+            for c_index, value in enumerate(r, 1):
+                ws.cell(row=r_index, column=c_index, value=value)
+
+    # Get the previous month
+    current_month = datetime.datetime.now() - relativedelta(months=0)
+
     # Format the output file path
     directory_path = Path(directory)
-    output_file_path = directory_path.parent / 'MTD Safety Scorecard' /f"MTD Safety Scorecard - {current_month.strftime('%d %b %Y')}.xlsx"
-    print(f"Output file path: {output_file_path}")
+    output_file_path = directory_path.parent / 'MTD Safety Scorecard' / \
+                       f'MTD Safety Scorecard - {current_month.strftime("%d %b %Y")}.xlsx'
+
 
     # If file already exists, append a number suffix
     directory_path = Path(directory)
     if output_file_path.is_file():
         counter = 1
         while output_file_path.is_file():
-            output_file_path = directory_path.parent / 'MTD Safety Scorecard' / f" MTD Safety Scorecard - {current_month.strftime('%d %b %Y')} ({counter}).xlsx"
+            output_file_path = directory_path.parent / 'MTD Safety Scorecard' / f' MTD Safety Scorecard - {current_month.strftime("%d %b %Y")} ({counter}).xlsx'
             counter += 1
 
+    # Save the workbook
     wb.save(output_file_path)
-
 
 if __name__ == "__main__":
     main()
