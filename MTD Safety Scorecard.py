@@ -130,7 +130,7 @@ def main():
                                df['Lane Departure (Manual)']
     df['Policy Violations'] = df['Obstructed Camera (Automatic)'] + df['Obstructed Camera (Manual)'] + df[
         'Eating/Drinking (Manual)'] + df['Smoking (Manual)'] + df['No Seat Belt']
-    #df['Speeding %'] = df['Percent Moderate Speeding'] + df['Percent Heavy Speeding'] + df['Percent Severe Speeding']
+    # df['Speeding %'] = df['Percent Moderate Speeding'] + df['Percent Heavy Speeding'] + df['Percent Severe Speeding']
     df['Score Range'] = df['Safety Score'].apply(score_range)
     df['Moderate Speeding'] = df['Time Over Speed Limit (hh:mm:ss) - Moderate']
     df['Heavy Speeding'] = df['Time Over Speed Limit (hh:mm:ss) - Heavy']
