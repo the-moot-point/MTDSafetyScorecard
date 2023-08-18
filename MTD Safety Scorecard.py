@@ -101,15 +101,22 @@ def main():
     """
     Main function to read the data and generate driver safety report.
     """
-    # Specify the directory where the .xlsx files are stored
-    directory = 'C:/Users/sgtjo/Documents/Samsara MTD Scorecard/Samsara _raw_data'
+    # Get the directory of the current script
+    directory = os.path.dirname(os.path.abspath(__file__))
 
-    # Get the newest .xlsx file in the directory
-    input_file_path = get_latest_file_in_directory(directory, 'xlsx')
+    # Find all .xlsx files in the directory
+    xlsx_files = glob.glob(f"{directory}/Samsara _raw_data/*.xlsx")
+
+    if not xlsx_files:
+        print(f"No .xlsx files found in directory: {directory}")
+        return
+
+    # Select the first .xlsx file found
+    input_file_path = xlsx_files[0]
 
     # Read the config file
-    directory_path = Path(directory)
-    config = read_config(directory_path.parent / 'config.txt')
+    config_path = f"{directory}/Samsara _raw_data/config.txt"
+    config = read_config(config_path)
 
     # Read the data
     df = read_data(input_file_path)
@@ -171,11 +178,8 @@ def main():
         for r in dataframe_to_rows(report['dataframe'], index=False, header=True):
             ws.append(r)
 
-    # Get the previous month
-    current_month = datetime.datetime.now() - relativedelta(months=0)
-
     # Load the existing workbook (template)
-    wb = load_workbook('C:/Users/sgtjo/Documents/Samsara MTD Scorecard/template/template.xlsx')
+    wb = load_workbook('template/template.xlsx')
 
     # create reports (sheets) and add them to the workbook
     for report in reports:
@@ -197,21 +201,21 @@ def main():
 
     # Format the output file path
     directory_path = Path(directory)
-    output_file_path = directory_path.parent / 'MTD Safety Scorecard' / \
+    output_file_path = directory_path.parent / 'MTD Safety Scorecard/Report' / \
                        f'MTD Safety Scorecard - {current_month.strftime("%d %b %Y")}.xlsx'
-
 
     # If file already exists, append a number suffix
     directory_path = Path(directory)
     if output_file_path.is_file():
         counter = 1
         while output_file_path.is_file():
-            output_file_path = directory_path.parent / 'MTD Safety Scorecard' / f' MTD Safety Scorecard - {current_month.strftime("%d %b %Y")} ({counter}).xlsx'
+            output_file_path = (directory_path.parent / 'MTD Safety Scorecard/Report' /
+                                f' MTD Safety Scorecard - {current_month.strftime("%d %b %Y")} ({counter}).xlsx')
             counter += 1
 
     # Save the workbook
     wb.save(output_file_path)
 
+
 if __name__ == "__main__":
     main()
-
