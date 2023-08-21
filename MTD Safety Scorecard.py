@@ -115,7 +115,7 @@ def main():
     input_file_path = xlsx_files[0]
 
     # Read the config file
-    config_path = f"{directory}/Samsara _raw_data/config.txt"
+    config_path = 'Samsara _raw_data/config.txt'
     config = read_config(config_path)
 
     # Read the data
